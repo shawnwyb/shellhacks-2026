@@ -1,1 +1,19 @@
 /lerobot/
+/models/
+/outputs/molmo_diagnostics/
+/.cache/
+
+# Python caches and local environments
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+
+# Local secrets and macOS metadata
+.env
+.env.*
+!.env.example
+.DS_Store
