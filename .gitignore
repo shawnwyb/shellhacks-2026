@@ -1,7 +1,6 @@
 /lerobot/
 /models/
-/outputs/molmo_diagnostics/
-/outputs/grasp_reference/
+/outputs/
 /.cache/
 
 # Python caches and local environments
