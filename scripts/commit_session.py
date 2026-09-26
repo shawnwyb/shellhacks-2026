@@ -58,6 +58,11 @@ def patch_session(session_cls):
             " [seconds] [reset]",
             "run Molmo coarse (default 15s) then taught down/clamp/up primitives and hold",
         )
+        self._commands["commitandrecord"] = (
+            self._cmd_commitandrecord,
+            " [seconds] [reset]",
+            "same as /commit but records top+wrist video through coarse and primitives",
+        )
 
     def _cmd_commit(self, cmd):
         import threading
@@ -82,9 +87,81 @@ def patch_session(session_cls):
         ).start()
         self._print(f"Commit started — Molmo coarse {seconds:g}s, then primitives taking over...")
 
+    def _cmd_commitandrecord(self, cmd):
+        import threading
+
+        parts = cmd.args.strip().lower().split()
+        want_reset = "reset" in parts
+        seconds = float(os.environ.get("COMMIT_SECONDS", "15"))
+        for part in parts:
+            try:
+                seconds = float(part)
+                break
+            except ValueError:
+                continue
+        if getattr(self.controller, "stopped", False):
+            self._print("Can't commit — the session has stopped.")
+            return
+        threading.Thread(
+            target=_run_commit,
+            args=(self, want_reset, seconds, True),
+            name="commit-record",
+            daemon=True,
+        ).start()
+        self._print(f"Commit+record started — recording cams, Molmo coarse {seconds:g}s, then primitives...")
+
     session_cls.__init__ = __init__
     session_cls._cmd_commit = _cmd_commit
+    session_cls._cmd_commitandrecord = _cmd_commitandrecord
     return session_cls
+
+
+def _start_cam_recorder(robot, outdir, fps=10.0):
+    import threading
+
+    outdir.mkdir(parents=True, exist_ok=True)
+    stop = threading.Event()
+    (outdir / "meta.json").write_text(
+        __import__("json").dumps({"fps": fps, "started": __import__("time").time()})
+    )
+
+    def loop():
+        import time as _time
+        import cv2 as _cv2
+        import numpy as _np
+        writers = {}
+        try:
+            interval = 1.0 / max(1.0, fps)
+            while not stop.is_set():
+                tick = _time.monotonic()
+                try:
+                    obs = robot.get_observation()
+                except Exception:
+                    _time.sleep(interval)
+                    continue
+                for key, tag in (("cam0", "top"), ("cam1", "wrist")):
+                    frame = obs.get(key)
+                    if frame is None:
+                        continue
+                    if key not in writers:
+                        h, w = frame.shape[:2]
+                        path = str(outdir / f"{key}_{tag}.mp4")
+                        writers[key] = _cv2.VideoWriter(
+                            path, _cv2.VideoWriter_fourcc(*"mp4v"), fps, (w, h)
+                        )
+                    writers[key].write(_cv2.cvtColor(frame, _cv2.COLOR_RGB2BGR))
+                elapsed = _time.monotonic() - tick
+                _time.sleep(max(0.0, interval - elapsed))
+        finally:
+            for w in writers.values():
+                try:
+                    w.release()
+                except Exception:
+                    pass
+
+    thread = threading.Thread(target=loop, name="commit-cam-recorder", daemon=True)
+    thread.start()
+    return stop, thread
 
 
 def _joints_from_obs(obs):
@@ -107,11 +184,20 @@ def _move(robot, start, goal, step_deg=1.5, fps=30.0):
     return {k: goal[k] for k in keys}
 
 
-def _run_commit(session, want_reset, seconds=15.0):
+def _run_commit(session, want_reset, seconds=15.0, record=False):
     ctrl = session.controller
     ctx = session._ctx
     robot = ctx.hardware.robot_wrapper
+    rec_stop = None
+    rec_thread = None
+    rec_dir = None
     try:
+        if record:
+            from datetime import datetime as _dt
+            rec_dir = Path("outputs/commit_records") / _dt.now().strftime("%Y%m%d-%H%M%S-%f")
+            rec_fps = float(os.environ.get("COMMIT_RECORD_FPS", "10"))
+            rec_stop, rec_thread = _start_cam_recorder(robot, rec_dir, fps=rec_fps)
+            session._print(f"Recording cams to {rec_dir} ...")
         if not ctrl._running.is_set():
             if not ctrl.start():
                 session._print("Commit: policy already running elsewhere, using live motion...")
@@ -168,6 +254,11 @@ def _run_commit(session, want_reset, seconds=15.0):
                 time.sleep(0.8)
         session._print("FSM: LIFT -> HOLD (holding position)")
         robot.send_action(cur)
+        if record and rec_dir is not None:
+            import time as _time2
+            hold_s = float(os.environ.get("COMMIT_RECORD_HOLD_S", "5"))
+            session._print(f"Recording hold {hold_s:g}s for the grasp...")
+            _time2.sleep(max(0.0, hold_s))
         if want_reset:
             session._print("Commit done — resetting to initial position...")
             ctrl.reset()
@@ -175,3 +266,9 @@ def _run_commit(session, want_reset, seconds=15.0):
             session._print("Commit done — holding. /commit reset to run + return, /reset to return, /start to resume Molmo.")
     except Exception as exc:
         session._print(f"Commit failed: {exc}")
+    finally:
+        if record and rec_stop is not None:
+            rec_stop.set()
+            if rec_thread is not None:
+                rec_thread.join(timeout=5)
+            session._print(f"Recording saved: {rec_dir}")
