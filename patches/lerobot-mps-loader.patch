@@ -1,0 +1,26 @@
+diff --git a/src/lerobot/policies/pretrained.py b/src/lerobot/policies/pretrained.py
+index 60d7e4ab..9fcc05fd 100644
+--- a/src/lerobot/policies/pretrained.py
++++ b/src/lerobot/policies/pretrained.py
+@@ -22,6 +22,7 @@ import warnings
+ from pathlib import Path
+ from typing import TYPE_CHECKING, Any, ClassVar, TypedDict, TypeVar, Unpack
+ 
++import torch
+ from huggingface_hub import hf_hub_download, save_torch_state_dict
+ from huggingface_hub.constants import SAFETENSORS_SINGLE_FILE
+ from huggingface_hub.errors import HfHubHTTPError
+@@ -219,8 +220,12 @@ class PreTrainedPolicy(nn.Module, HubMixin, abc.ABC):
+ 
+     @classmethod
+     def _load_as_safetensor(cls, model: T, model_file: str, map_location: str, strict: bool) -> T:
++        # from_pretrained moves the populated model to MPS immediately afterwards.
++        # Loading the full checkpoint on MPS here creates a second GPU copy in
++        # its saved dtype, even when the model uses lower-precision parameters.
++        load_device = "cpu" if torch.device(map_location).type == "mps" else map_location
+         missing_keys, unexpected_keys = load_model_as_safetensor(
+-            model, model_file, strict=strict, device=resolve_safetensors_device(map_location)
++            model, model_file, strict=strict, device=resolve_safetensors_device(load_device)
+         )
+         log_model_loading_keys(missing_keys, unexpected_keys)
+         return model
