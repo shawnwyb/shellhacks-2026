@@ -17,6 +17,7 @@ elif [[ $# -ne 0 ]]; then
 fi
 
 echo "Rollout mode: $mode_label"
+echo "In-session: /commit (15s Molmo + down/clamp/up + hold) or /commit reset."
 
 exec python scripts/molmo_diagnostic_rollout.py \
   --strategy.type=base \
@@ -31,9 +32,9 @@ exec python scripts/molmo_diagnostic_rollout.py \
   --robot.id=my_awesome_follower_arm \
   --robot.use_degrees=true \
   --robot.max_relative_target=10 \
-  --robot.cameras='{"cam0":{"type":"opencv","index_or_path":1,"width":640,"height":480,"fps":30},"cam1":{"type":"opencv","index_or_path":0,"width":640,"height":480,"fps":30}}' \
+  --robot.cameras='{"cam0":{"type":"opencv","index_or_path":0,"width":640,"height":480,"fps":30},"cam1":{"type":"opencv","index_or_path":1,"width":640,"height":480,"fps":30}}' \
   --fps=30 \
-  --task="Pick up the red tape roll." \
+  --task="Pick up the white block." \
   --duration=30 \
   --interactive=true \
   --return_to_initial_position=false \
