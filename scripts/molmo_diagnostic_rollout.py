@@ -3,7 +3,9 @@
 No extra serial reads, camera reads, or motor commands are performed.
 """
 import json
+import logging
 import time
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from pathlib import Path
 
@@ -16,10 +18,37 @@ def install_trace(robot_class, directory):
     latest = {}
     previous_command = None
     frame_saved = False
+    frame_directory = directory / "frames"
+    frame_directory.mkdir()
+    frame_writer = ThreadPoolExecutor(max_workers=1, thread_name_prefix="diagnostic_frames")
+    pending_frame = None
+    last_frame_time = float("-inf")
+
+    def save_frames(frames, captured_at):
+        from PIL import Image
+
+        try:
+            for name, frame in frames.items():
+                path = frame_directory / f"{captured_at}_{name}.jpg"
+                temporary = path.with_suffix(".tmp")
+                Image.fromarray(frame).save(temporary, format="JPEG", quality=90)
+                temporary.replace(path)
+        except Exception:
+            logging.exception("Could not save diagnostic camera snapshot")
 
     def observe(robot):
+        nonlocal pending_frame, last_frame_time
         observation = original_observe(robot)
-        latest[id(robot)] = (time.monotonic(), observation)
+        observed_at = time.monotonic()
+        latest[id(robot)] = (observed_at, observation)
+        # Reuse existing RGB observations. Opening another capture on macOS can
+        # renegotiate the shared camera stream and break the rollout's dimensions.
+        # Keep at most one write pending so disk delays cannot build a backlog.
+        if observed_at - last_frame_time >= 0.5 and (pending_frame is None or pending_frame.done()):
+            frames = {name: observation[name].copy() for name in ("cam0", "cam1") if name in observation}
+            if frames:
+                pending_frame = frame_writer.submit(save_frames, frames, time.time_ns())
+                last_frame_time = observed_at
         return observation
 
     def send(robot, action):
@@ -59,6 +88,7 @@ def install_trace(robot_class, directory):
     def close():
         robot_class.get_observation = original_observe
         robot_class.send_action = original_send
+        frame_writer.shutdown(wait=True)
         stream.close()
 
     return close
@@ -72,7 +102,7 @@ def main():
     directory = root / "outputs/molmo_diagnostics" / datetime.now().strftime("%Y%m%d-%H%M%S-%f")
     close = install_trace(SOFollower, directory)
     print(f"Diagnostic output: {directory}", flush=True)
-    print("cam0 = scene; cam1 = wrist. First-action images and joint targets will be saved.", flush=True)
+    print("cam0 = scene; cam1 = wrist. Joint targets and timestamped camera snapshots (up to 2 Hz) will be saved.", flush=True)
     try:
         rollout_main()
     finally:
