@@ -95,6 +95,11 @@ def install_trace(robot_class, directory):
 
 
 def main():
+    import sys
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
+    from lerobot.rollout.interactive import InteractiveSession
+    import commit_session
+    commit_session.patch_session(InteractiveSession)
     from lerobot.robots.so_follower import SOFollower
     from lerobot.scripts.lerobot_rollout import main as rollout_main
 
@@ -102,7 +107,8 @@ def main():
     directory = root / "outputs/molmo_diagnostics" / datetime.now().strftime("%Y%m%d-%H%M%S-%f")
     close = install_trace(SOFollower, directory)
     print(f"Diagnostic output: {directory}", flush=True)
-    print("cam0 = scene; cam1 = wrist. Joint targets and timestamped camera snapshots (up to 2 Hz) will be saved.", flush=True)
+    print("cam0 = top; cam1 = wrist. Joint targets and timestamped camera snapshots (up to 2 Hz) will be saved.", flush=True)
+    print("In-session commit: /commit (down/clamp/up + hold) or /commit reset (then return to initial).", flush=True)
     try:
         rollout_main()
     finally:
