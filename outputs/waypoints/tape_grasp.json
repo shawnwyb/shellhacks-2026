@@ -1,0 +1,70 @@
+{
+  "port": "/dev/tty.usbmodem5C821089701",
+  "id": "my_awesome_follower_arm",
+  "use_degrees": true,
+  "joint_order": [
+    "shoulder_pan.pos",
+    "shoulder_lift.pos",
+    "elbow_flex.pos",
+    "wrist_flex.pos",
+    "wrist_roll.pos",
+    "gripper.pos"
+  ],
+  "waypoints": [
+    {
+      "name": "above_tape_gripper_open",
+      "joints": {
+        "shoulder_pan.pos": 12.571428571428571,
+        "shoulder_lift.pos": 1.2747252747252746,
+        "elbow_flex.pos": 16.923076923076923,
+        "wrist_flex.pos": 48.79120879120879,
+        "wrist_roll.pos": 2.065934065934066,
+        "gripper.pos": 39.356605065023956
+      }
+    },
+    {
+      "name": "lowered_around_tape",
+      "joints": {
+        "shoulder_pan.pos": 14.76923076923077,
+        "shoulder_lift.pos": 27.384615384615383,
+        "elbow_flex.pos": 4.615384615384615,
+        "wrist_flex.pos": 47.73626373626374,
+        "wrist_roll.pos": 1.4505494505494505,
+        "gripper.pos": 38.535249828884325
+      }
+    },
+    {
+      "name": "gripper_closed",
+      "joints": {
+        "shoulder_pan.pos": 14.76923076923077,
+        "shoulder_lift.pos": 27.64835164835165,
+        "elbow_flex.pos": 4.0,
+        "wrist_flex.pos": 47.64835164835165,
+        "wrist_roll.pos": 1.4505494505494505,
+        "gripper.pos": 30.663928815879533
+      }
+    },
+    {
+      "name": "lifted_with_tape",
+      "joints": {
+        "shoulder_pan.pos": 14.857142857142858,
+        "shoulder_lift.pos": -9.89010989010989,
+        "elbow_flex.pos": 5.054945054945055,
+        "wrist_flex.pos": 48.79120879120879,
+        "wrist_roll.pos": 1.6263736263736264,
+        "gripper.pos": 30.663928815879533
+      }
+    },
+    {
+      "name": "return_release",
+      "joints": {
+        "shoulder_pan.pos": 14.417582417582418,
+        "shoulder_lift.pos": 26.945054945054945,
+        "elbow_flex.pos": 4.8791208791208796,
+        "wrist_flex.pos": 48.61538461538461,
+        "wrist_roll.pos": 1.4505494505494505,
+        "gripper.pos": 30.663928815879533
+      }
+    }
+  ]
+}

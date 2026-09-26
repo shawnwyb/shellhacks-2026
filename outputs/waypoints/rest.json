@@ -1,0 +1,22 @@
+{
+  "port": "/dev/tty.usbmodem5C821089701",
+  "id": "my_awesome_follower_arm",
+  "use_degrees": true,
+  "name": "rest",
+  "joints": {
+    "shoulder_pan.pos": 5.8901098901098905,
+    "shoulder_lift.pos": -99.91208791208791,
+    "elbow_flex.pos": 96.21978021978022,
+    "wrist_flex.pos": 61.714285714285715,
+    "wrist_roll.pos": 1.7142857142857142,
+    "gripper.pos": 9.034907597535934
+  },
+  "joint_order": [
+    "shoulder_pan.pos",
+    "shoulder_lift.pos",
+    "elbow_flex.pos",
+    "wrist_flex.pos",
+    "wrist_roll.pos",
+    "gripper.pos"
+  ]
+}
