@@ -4,6 +4,8 @@ Object pick-up with an [SO-101](https://huggingface.co/docs/lerobot/so101) arm. 
 
 Use this to approach an object, commit to a grasp, and lift and hold it.
 
+<img width="360" height="270" alt="cam1_wrist_full_2x" src="https://github.com/user-attachments/assets/9a46b176-7cd6-4895-808d-4367412bea23" />
+
 ## Getting started
 
 You need: macOS, conda env `lerobot` ([LeRobot install](https://huggingface.co/docs/lerobot/installation)), local `models/molmoact2-mps` weights (untracked, prepared with `scripts/prepare_molmo_mps.py`), SO-101 follower (`my_awesome_follower_arm`), two USB cameras. The USB port name varies by machine.
